@@ -14,21 +14,21 @@ export default {
       },
       colors: {
         brand: {
-          black: '#0A0A0A',
+          black: '#060608',
           white: '#FAFAFA',
           gray: {
             50:  '#F7F7F7',
             100: '#EFEFEF',
             200: '#DCDCDC',
             300: '#BDBDBD',
-            400: '#989898',
-            500: '#6B6B6B',
-            600: '#4A4A4A',
-            700: '#2E2E2E',
-            800: '#1C1C1C',
-            900: '#0F0F0F',
+            400: '#9E9EA4',
+            500: '#71717A',
+            600: '#4E4E52',
+            700: '#353539',
+            800: '#242427',
+            900: '#121214',
           },
-          accent: '#1A1A1A',
+          accent: '#18181B',
         }
       },
       boxShadow: {

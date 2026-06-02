@@ -84,7 +84,8 @@
 
 @utility card {
   @apply bg-white border border-brand-gray-100 rounded-xl shadow-card
-         dark:bg-brand-gray-900 dark:border-brand-gray-800/80;
+         dark:bg-brand-gray-900 dark:border-brand-gray-800/80
+         dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)];
 }
 
 .card-hover {
