@@ -16,7 +16,11 @@ function CreateAuditModal({ open, onClose }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => { if (open) fetchChecklists() }, [open])
+  useEffect(() => {
+    if (open && profile) {
+      fetchChecklists('', '', profile.org_id)
+    }
+  }, [open, profile])
 
   const update = f => e => setForm(p => ({ ...p, [f]: e.target.value }))
 
@@ -80,6 +84,7 @@ export default function AuditsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const isViewer = profile?.role === 'viewer'
 
   useEffect(() => {
     if (profile) fetchAudits(profile.id, profile.role)
@@ -99,15 +104,17 @@ export default function AuditsPage() {
           <h1 className="page-title">Audits</h1>
           <p className="page-subtitle">Manage and execute your safety audits.</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary self-start sm:self-auto">
-          <Plus size={14} /> New Audit
-        </button>
+        {!isViewer && (
+          <button onClick={() => setShowCreate(true)} className="btn-primary self-start sm:self-auto">
+            <Plus size={14} /> New Audit
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1 w-full sm:max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray-400" />
-          <input className="input pl-9" placeholder="Search by site or checklist..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input !pl-9" placeholder="Search by site or checklist..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <select className="input sm:w-auto" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
@@ -123,7 +130,7 @@ export default function AuditsPage() {
           icon={FileCheck}
           title="No audits found"
           description="Start a new audit to begin your compliance inspection."
-          action={<button onClick={() => setShowCreate(true)} className="btn-primary"><Plus size={14} />New Audit</button>}
+          action={!isViewer ? <button onClick={() => setShowCreate(true)} className="btn-primary"><Plus size={14} />New Audit</button> : null}
         />
       ) : (
         <div className="table-container">
@@ -166,7 +173,7 @@ export default function AuditsPage() {
                     <td className="text-xs text-brand-gray-400">{formatDate(audit.created_at)}</td>
                     <td>
                       <Link to={`/audits/${audit.id}`} className="btn-ghost py-1 px-2 text-xs">
-                        Open <ArrowRight size={11} />
+                        {isViewer ? 'View' : 'Open'} <ArrowRight size={11} />
                       </Link>
                     </td>
                   </tr>
@@ -177,7 +184,7 @@ export default function AuditsPage() {
         </div>
       )}
 
-      <CreateAuditModal open={showCreate} onClose={() => setShowCreate(false)} />
+      {!isViewer && <CreateAuditModal open={showCreate} onClose={() => setShowCreate(false)} />}
     </div>
   )
 }

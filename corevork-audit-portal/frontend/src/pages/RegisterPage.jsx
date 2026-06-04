@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -7,8 +7,14 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ fullName: '', orgName: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signUp } = useAuthStore()
+  const { signUp, user } = useAuthStore()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, navigate])
 
   const update = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
 
@@ -21,8 +27,12 @@ export default function RegisterPage() {
     }
     setLoading(true)
     try {
-      await signUp(form.email, form.password, form.fullName, form.orgName)
-      navigate('/verify-email')
+      const data = await signUp(form.email, form.password, form.fullName, form.orgName)
+      if (data?.session) {
+        navigate('/dashboard')
+      } else {
+        navigate('/verify-email')
+      }
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.')
     } finally {

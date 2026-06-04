@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShieldCheck, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -9,8 +9,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn } = useAuthStore()
+  const { signIn, user } = useAuthStore()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -97,7 +103,7 @@ export default function LoginPage() {
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  className="input pr-10"
+                  className="input !pr-10"
                   placeholder="••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}

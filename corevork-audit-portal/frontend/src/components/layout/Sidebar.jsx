@@ -32,6 +32,7 @@ export default function Sidebar({ isOpen, onClose }) {
   }
 
   const isAdmin = profile?.role === 'admin'
+  const isViewer = profile?.role === 'viewer'
 
   return (
     <>
@@ -73,7 +74,9 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <p className="px-2 mb-2 text-[10px] font-medium text-brand-gray-400 uppercase tracking-widest dark:text-brand-gray-500">Menu</p>
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {navItems
+            .filter(item => !(isViewer && item.to === '/checklists/generate'))
+            .map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}

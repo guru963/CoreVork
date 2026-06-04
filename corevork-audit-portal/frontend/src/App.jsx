@@ -14,6 +14,10 @@ import ReportsPage from '@/pages/ReportsPage'
 import CorrectiveActionsPage from '@/pages/CorrectiveActionsPage'
 import UsersPage from '@/pages/UsersPage'
 import SettingsPage from '@/pages/SettingsPage'
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
+import ResetPasswordPage from '@/pages/ResetPasswordPage'
+import VerifyEmailPage from '@/pages/VerifyEmailPage'
+import AcceptInvitePage from '@/pages/AcceptInvitePage'
 
 export default function App() {
   const initialize = useAuthStore(s => s.initialize)
@@ -37,6 +41,10 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/accept-invite" element={<AcceptInvitePage />} />
         <Route element={<AuthGuard />}>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

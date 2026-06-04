@@ -12,16 +12,17 @@ const STATUS_COLS = [
 ]
 const PRIORITY_COLOR = { critical: 'red', high: 'yellow', medium: 'blue', low: 'gray' }
 
-function ActionCard({ action, onStatusChange, onDragStart, onDragEnd, isDragging }) {
+function ActionCard({ action, onStatusChange, onDragStart, onDragEnd, isDragging, isViewer }) {
   const [open, setOpen] = useState(false)
 
   return (
     <div
-      draggable
+      draggable={!isViewer}
       onDragStart={(e) => onDragStart(e, action.id)}
       onDragEnd={onDragEnd}
       className={cn(
-        'card p-3 hover:shadow-card-hover transition-all duration-200 cursor-grab active:cursor-grabbing select-none',
+        'card p-3 hover:shadow-card-hover transition-all duration-200 select-none',
+        !isViewer ? 'cursor-grab active:cursor-grabbing' : '',
         isDragging
           ? 'opacity-30 border-dashed border-brand-gray-300 dark:border-brand-gray-700 shadow-none bg-brand-gray-50 dark:bg-brand-gray-800/40'
           : 'bg-white dark:bg-brand-gray-800'
@@ -29,9 +30,11 @@ function ActionCard({ action, onStatusChange, onDragStart, onDragEnd, isDragging
       onClick={() => setOpen(!open)}
     >
       <div className="flex items-start gap-2">
-        <div className="text-brand-gray-300 dark:text-brand-gray-600 hover:text-brand-gray-400 dark:hover:text-brand-gray-500 shrink-0 mt-0.5 cursor-grab">
-          <GripVertical size={13} />
-        </div>
+        {!isViewer && (
+          <div className="text-brand-gray-300 dark:text-brand-gray-600 hover:text-brand-gray-400 dark:hover:text-brand-gray-500 shrink-0 mt-0.5 cursor-grab">
+            <GripVertical size={13} />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-brand-black dark:text-brand-white leading-snug line-clamp-2">{action.action}</p>
           <p className="text-[11px] text-brand-gray-400 dark:text-brand-gray-500 mt-1 truncate">{action.section_title}</p>
@@ -48,18 +51,20 @@ function ActionCard({ action, onStatusChange, onDragStart, onDragEnd, isDragging
           <p className="text-[11px] text-brand-gray-500 dark:text-brand-gray-400 leading-relaxed">
             <span className="font-medium text-brand-gray-700 dark:text-brand-gray-300">Finding: </span>{action.question_text}
           </p>
-          <div className="flex gap-1.5 flex-wrap">
-            {STATUS_COLS.map(s => (
-              <button key={s.key} onClick={e => { e.stopPropagation(); onStatusChange(action.id, s.key) }}
-                className={cn('flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-all',
-                  action.status === s.key
-                    ? 'border-brand-black bg-brand-black text-white dark:border-brand-white dark:bg-brand-white dark:text-brand-black'
-                    : 'border-brand-gray-200 text-brand-gray-600 hover:border-brand-gray-400 dark:border-brand-gray-700 dark:text-brand-gray-400 dark:hover:border-brand-gray-500'
-                )}>
-                <s.icon size={10} />{s.label}
-              </button>
-            ))}
-          </div>
+          {!isViewer && (
+            <div className="flex gap-1.5 flex-wrap">
+              {STATUS_COLS.map(s => (
+                <button key={s.key} onClick={e => { e.stopPropagation(); onStatusChange(action.id, s.key) }}
+                  className={cn('flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border transition-all',
+                    action.status === s.key
+                      ? 'border-brand-black bg-brand-black text-white dark:border-brand-white dark:bg-brand-white dark:text-brand-black'
+                      : 'border-brand-gray-200 text-brand-gray-600 hover:border-brand-gray-400 dark:border-brand-gray-700 dark:text-brand-gray-400 dark:hover:border-brand-gray-500'
+                  )}>
+                  <s.icon size={10} />{s.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -68,6 +73,7 @@ function ActionCard({ action, onStatusChange, onDragStart, onDragEnd, isDragging
 
 export default function CorrectiveActionsPage() {
   const { profile, user } = useAuthStore()
+  const isViewer = profile?.role === 'viewer'
   const { actions, fetchActions, updateStatus, loading } = useCorrectiveStore()
   const [priority, setPriority] = useState('')
   const [draggedId, setDraggedId] = useState(null)
@@ -91,6 +97,7 @@ export default function CorrectiveActionsPage() {
 
   // Drag and Drop handlers
   const handleDragStart = (e, id) => {
+    if (isViewer) return
     e.dataTransfer.setData('text/plain', id)
     setDraggedId(id)
   }
@@ -111,6 +118,7 @@ export default function CorrectiveActionsPage() {
 
   const handleDrop = async (e, colKey) => {
     e.preventDefault()
+    if (isViewer) return
     const id = e.dataTransfer.getData('text/plain')
     if (id) {
       await updateStatus(id, colKey)
@@ -165,9 +173,9 @@ export default function CorrectiveActionsPage() {
                   'bg-brand-gray-50 rounded-xl p-3 border-2 border-transparent transition-all duration-200 min-h-[400px] flex flex-col dark:bg-brand-gray-900/60',
                   isOver ? 'border-brand-black bg-brand-gray-100/80 shadow-sm dark:border-brand-white dark:bg-brand-gray-900/80' : ''
                 )}
-                onDragOver={(e) => handleDragOver(e, col.key)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, col.key)}
+                onDragOver={(e) => !isViewer && handleDragOver(e, col.key)}
+                onDragLeave={!isViewer ? handleDragLeave : undefined}
+                onDrop={(e) => !isViewer && handleDrop(e, col.key)}
               >
                 <div className="flex items-center gap-2 mb-3 px-1 shrink-0">
                   <col.icon size={13} className={col.color} />
@@ -188,6 +196,7 @@ export default function CorrectiveActionsPage() {
                         onDragStart={handleDragStart}
                         onDragEnd={handleDragEnd}
                         isDragging={draggedId === action.id}
+                        isViewer={isViewer}
                       />
                     ))
                   )}

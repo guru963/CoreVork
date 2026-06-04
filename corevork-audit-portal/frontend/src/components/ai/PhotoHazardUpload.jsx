@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Camera, AlertTriangle, CheckCircle2, Loader2, X } from 'lucide-react'
 import { analysePhotoContext } from '@/lib/groq'
 
-export default function PhotoHazardUpload({ question, sectionTitle, onUpload, currentUrl }) {
+export default function PhotoHazardUpload({ question, sectionTitle, onUpload, currentUrl, disabled }) {
   const [uploading, setUploading] = useState(false)
   const [analysing, setAnalysing] = useState(false)
   const [hazardFlag, setHazardFlag] = useState(null)
@@ -48,10 +48,12 @@ export default function PhotoHazardUpload({ question, sectionTitle, onUpload, cu
         <div className="space-y-2">
           <div className="relative w-full h-28 rounded-lg overflow-hidden border border-brand-gray-200">
             <img src={preview} alt="Evidence" className="w-full h-full object-cover" />
-            <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-              <span className="text-white text-xs font-medium">Change photo</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
-            </label>
+            {!disabled && (
+              <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                <span className="text-white text-xs font-medium">Change photo</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleFile} />
+              </label>
+            )}
           </div>
 
           {/* Hazard flag */}
@@ -74,7 +76,7 @@ export default function PhotoHazardUpload({ question, sectionTitle, onUpload, cu
             </div>
           )}
         </div>
-      ) : (
+      ) : !disabled && (
         <label className="flex items-center gap-2 cursor-pointer group">
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-brand-gray-400 group-hover:text-brand-black transition-colors">
             {uploading

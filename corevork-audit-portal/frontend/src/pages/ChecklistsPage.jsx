@@ -2,19 +2,26 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, ClipboardList, ChevronRight, Wand2, BookOpen, Sparkles } from 'lucide-react'
 import { useChecklistStore } from '@/store/checklistStore'
+import { useAuthStore } from '@/store/authStore'
 import { Badge, EmptyState, Spinner } from '@/components/ui'
 
 const STANDARDS = ['', 'India Factories Act', 'OSHA', 'ISO 45001']
 const standardColor = { 'India Factories Act': 'blue', 'OSHA': 'green', 'ISO 45001': 'yellow' }
 
 export default function ChecklistsPage() {
+  const { profile } = useAuthStore()
+  const isViewer = profile?.role === 'viewer'
   const { checklists, fetchChecklists, loading } = useChecklistStore()
   const [search, setSearch] = useState('')
   const [standard, setStandard] = useState('')
   const [tab, setTab] = useState('library')
   const navigate = useNavigate()
 
-  useEffect(() => { fetchChecklists(search, standard) }, [search, standard])
+  useEffect(() => {
+    if (profile) {
+      fetchChecklists(search, standard, profile.org_id)
+    }
+  }, [search, standard, profile])
 
   const library = checklists.filter(c => !c.is_custom)
   const custom = checklists.filter(c => c.is_custom)
@@ -27,9 +34,11 @@ export default function ChecklistsPage() {
           <h1 className="page-title">Checklists</h1>
           <p className="page-subtitle">Use off-the-shelf templates or generate a custom checklist with AI.</p>
         </div>
-        <button onClick={() => navigate('/checklists/generate')} className="btn-primary shrink-0 self-start">
-          <Sparkles size={14} /> Generate with AI
-        </button>
+        {!isViewer && (
+          <button onClick={() => navigate('/checklists/generate')} className="btn-primary shrink-0 self-start">
+            <Sparkles size={14} /> Generate with AI
+          </button>
+        )}
       </div>
 
       <div className="flex gap-1 p-1 bg-brand-gray-100 rounded-xl w-fit mb-5">
@@ -46,7 +55,7 @@ export default function ChecklistsPage() {
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray-400" />
-          <input className="input pl-9" placeholder="Search checklists..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input className="input !pl-9" placeholder="Search checklists..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         {tab === 'library' && (
           <select className="input sm:w-auto" value={standard} onChange={e => setStandard(e.target.value)}>
@@ -65,7 +74,11 @@ export default function ChecklistsPage() {
             </div>
             <h3 className="text-sm font-semibold text-brand-black mb-1">No custom checklists yet</h3>
             <p className="text-sm text-brand-gray-500 mb-5 max-w-xs mx-auto">Use the AI generator to create a checklist tailored to your industry in seconds.</p>
-            <button onClick={() => navigate('/checklists/generate')} className="btn-primary"><Sparkles size={14} /> Generate with AI</button>
+            {!isViewer && (
+              <button onClick={() => navigate('/checklists/generate')} className="btn-primary">
+                <Sparkles size={14} /> Generate with AI
+              </button>
+            )}
           </div>
         ) : (
           <EmptyState icon={ClipboardList} title="No checklists found" description="Try a different search or filter." />

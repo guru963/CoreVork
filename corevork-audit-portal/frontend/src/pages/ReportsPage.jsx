@@ -85,7 +85,7 @@ export default function ReportsPage() {
 
       <div className="relative max-w-sm mb-5">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray-400" />
-        <input className="input pl-9" placeholder="Search reports..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="input !pl-9" placeholder="Search reports..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       {loading ? (

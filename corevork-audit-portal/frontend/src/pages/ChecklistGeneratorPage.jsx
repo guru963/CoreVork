@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import {
   Wand2, Sparkles, Plus, Trash2,
   ChevronDown, ChevronUp, ClipboardList, AlertCircle, CheckCircle2
@@ -22,6 +22,10 @@ const standardColor = {
 export default function ChecklistGeneratorPage() {
   const { profile } = useAuthStore()
   const navigate = useNavigate()
+
+  if (profile?.role === 'viewer') {
+    return <Navigate to="/checklists" replace />
+  }
 
   const [form, setForm] = useState({ industry: '', standard: '', description: '', sectionCount: 4, questionsPerSection: 5 })
   const [generated, setGenerated] = useState(null)

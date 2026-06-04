@@ -10,17 +10,25 @@ import AIAuditAssistant from '@/components/ai/AIAuditAssistant'
 import PhotoHazardUpload from '@/components/ai/PhotoHazardUpload'
 import StandardChatbot from '@/components/ai/StandardChatbot'
 
-function AnswerButton({ value, current, onClick, icon: Icon, label, activeClass }) {
+function AnswerButton({ value, current, onClick, icon: Icon, label, activeClass, disabled }) {
   const isActive = current === value
   return (
-    <button onClick={() => onClick(value)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${isActive ? activeClass : 'border-brand-gray-200 text-brand-gray-500 hover:border-brand-gray-300 hover:text-brand-black bg-white dark:border-brand-gray-700 dark:text-brand-gray-400 dark:hover:border-brand-gray-600 dark:hover:text-white dark:bg-brand-gray-800'}`}>
+    <button
+      disabled={disabled}
+      onClick={() => onClick(value)}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
+        isActive
+          ? activeClass
+          : 'border-brand-gray-200 text-brand-gray-500 hover:border-brand-gray-300 hover:text-brand-black bg-white dark:border-brand-gray-700 dark:text-brand-gray-400 dark:hover:border-brand-gray-600 dark:hover:text-white dark:bg-brand-gray-800'
+      } ${disabled ? 'opacity-60 cursor-not-allowed hover:border-brand-gray-200 hover:text-brand-gray-500 dark:hover:border-brand-gray-700 dark:hover:text-brand-gray-400' : ''}`}
+    >
       <Icon size={13} />
       <span className="hidden sm:inline">{label}</span>
     </button>
   )
 }
 
-function QuestionRow({ question, response, onAnswer, onNote, onPhoto, sectionTitle, standard }) {
+function QuestionRow({ question, response, onAnswer, onNote, onPhoto, sectionTitle, standard, disabled }) {
   const [showNote, setShowNote] = useState(!!response?.notes)
   const handleAIApply = ({ answer, notes }) => {
     if (answer) onAnswer(answer)
@@ -34,19 +42,21 @@ function QuestionRow({ question, response, onAnswer, onNote, onPhoto, sectionTit
           {question.guidance && <p className="text-xs text-brand-gray-400 dark:text-brand-gray-500 mt-1 italic">{question.guidance}</p>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <AnswerButton value="yes" current={response?.answer} onClick={onAnswer} icon={CheckCircle2} label="Yes" activeClass="border-green-500 bg-green-50 text-green-700 dark:border-green-600/60 dark:bg-green-950/20 dark:text-green-400" />
-          <AnswerButton value="no" current={response?.answer} onClick={onAnswer} icon={XCircle} label="No" activeClass="border-red-500 bg-red-50 text-red-600 dark:border-red-600/60 dark:bg-red-950/20 dark:text-red-400" />
-          <AnswerButton value="na" current={response?.answer} onClick={onAnswer} icon={MinusCircle} label="N/A" activeClass="border-brand-gray-400 bg-brand-gray-100 text-brand-gray-700 dark:border-brand-gray-600 dark:bg-brand-gray-800 dark:text-brand-gray-300" />
+          <AnswerButton value="yes" current={response?.answer} onClick={onAnswer} icon={CheckCircle2} label="Yes" activeClass="border-green-500 bg-green-50 text-green-700 dark:border-green-600/60 dark:bg-green-950/20 dark:text-green-400" disabled={disabled} />
+          <AnswerButton value="no" current={response?.answer} onClick={onAnswer} icon={XCircle} label="No" activeClass="border-red-500 bg-red-50 text-red-600 dark:border-red-600/60 dark:bg-red-950/20 dark:text-red-400" disabled={disabled} />
+          <AnswerButton value="na" current={response?.answer} onClick={onAnswer} icon={MinusCircle} label="N/A" activeClass="border-brand-gray-400 bg-brand-gray-100 text-brand-gray-700 dark:border-brand-gray-600 dark:bg-brand-gray-800 dark:text-brand-gray-300" disabled={disabled} />
         </div>
       </div>
       <div className="flex items-center gap-3 mt-3 flex-wrap">
-        <button onClick={() => setShowNote(!showNote)} className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${showNote || response?.notes ? 'text-brand-black' : 'text-brand-gray-400 hover:text-brand-gray-600'}`}>
-          <FileText size={11} />{response?.notes ? 'Edit note' : 'Add note'}
-        </button>
-        <AIAuditAssistant question={question} sectionTitle={sectionTitle} standard={standard} onApply={handleAIApply} />
+        {(!disabled || response?.notes) && (
+          <button onClick={() => setShowNote(!showNote)} className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${showNote || response?.notes ? 'text-brand-black' : 'text-brand-gray-400 hover:text-brand-gray-600'}`}>
+            <FileText size={11} />{disabled ? 'View note' : response?.notes ? 'Edit note' : 'Add note'}
+          </button>
+        )}
+        {!disabled && <AIAuditAssistant question={question} sectionTitle={sectionTitle} standard={standard} onApply={handleAIApply} />}
       </div>
-      <PhotoHazardUpload question={question} sectionTitle={sectionTitle} onUpload={onPhoto} currentUrl={response?.photo_url} />
-      {showNote && <textarea className="input mt-2 text-xs h-16 resize-none" placeholder="Add observations or notes..." value={response?.notes || ''} onChange={e => onNote(e.target.value)} />}
+      <PhotoHazardUpload question={question} sectionTitle={sectionTitle} onUpload={onPhoto} currentUrl={response?.photo_url} disabled={disabled} />
+      {showNote && <textarea disabled={disabled} className="input mt-2 text-xs h-16 resize-none" placeholder="Add observations or notes..." value={response?.notes || ''} onChange={e => onNote(e.target.value)} />}
     </div>
   )
 }
@@ -64,15 +74,19 @@ export default function AuditExecutionPage() {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
 
+  const isSubmitted = currentAudit?.status === 'submitted'
+  const isViewer = profile?.role === 'viewer'
+
   useEffect(() => {
     fetchAuditById(id).then(() => setLoading(false)).catch(() => navigate('/audits'))
     return () => clearCurrentAudit()
   }, [id])
 
   useEffect(() => {
+    if (isViewer || isSubmitted) return
     const interval = setInterval(() => saveResponses(), 30000)
     return () => clearInterval(interval)
-  }, [responses])
+  }, [responses, isViewer, isSubmitted])
 
   const sections = currentAudit?.checklists?.sections || []
   const allResponses = Object.values(responses)
@@ -128,8 +142,6 @@ export default function AuditExecutionPage() {
     </div>
   )
 
-  const isSubmitted = currentAudit?.status === 'submitted'
-
   return (
     <div className="max-w-4xl mx-auto animate-slide-up">
       <div className="mb-6">
@@ -183,18 +195,19 @@ export default function AuditExecutionPage() {
                 <Badge color="gray">{sections[activeSection].questions?.length} questions</Badge>
               </div>
               <div className="space-y-3">
-                {sections[activeSection].questions?.map(question => (
-                  <QuestionRow
-                    key={question.id}
-                    question={question}
-                    response={responses[question.id]}
-                    sectionTitle={sections[activeSection].title}
-                    standard={standard}
-                    onAnswer={val => handleAnswer(question.id, val)}
-                    onNote={val => handleNote(question.id, val)}
-                    onPhoto={file => handlePhoto(question.id, file)}
-                  />
-                ))}
+                  {sections[activeSection].questions?.map(question => (
+                    <QuestionRow
+                      key={question.id}
+                      question={question}
+                      response={responses[question.id]}
+                      sectionTitle={sections[activeSection].title}
+                      standard={standard}
+                      onAnswer={val => handleAnswer(question.id, val)}
+                      onNote={val => handleNote(question.id, val)}
+                      onPhoto={file => handlePhoto(question.id, file)}
+                      disabled={isViewer || isSubmitted}
+                    />
+                  ))}
               </div>
               <div className="flex justify-between mt-6">
                 <button onClick={() => setActiveSection(i => Math.max(0, i - 1))} disabled={activeSection === 0} className="btn-secondary disabled:opacity-40">
@@ -202,7 +215,7 @@ export default function AuditExecutionPage() {
                 </button>
                 {activeSection < sections.length - 1 ? (
                   <button onClick={() => setActiveSection(i => i + 1)} className="btn-primary">Next</button>
-                ) : !isSubmitted && (
+                ) : !isSubmitted && !isViewer && (
                   <button onClick={() => setShowSubmit(true)} className="btn-primary bg-green-700 hover:bg-green-800">
                     <Send size={14} /> Submit Audit
                   </button>
@@ -213,7 +226,7 @@ export default function AuditExecutionPage() {
         </div>
       </div>
 
-      {!isSubmitted && (
+      {!isSubmitted && !isViewer && (
         <div className="fixed bottom-24 right-6 z-30">
           <button onClick={saveResponses} disabled={saving} className="btn-secondary shadow-card">
             <Save size={14} /> {saving ? 'Saving...' : 'Save'}

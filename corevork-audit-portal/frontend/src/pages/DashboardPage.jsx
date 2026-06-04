@@ -36,6 +36,7 @@ export default function DashboardPage() {
   // Use user.id as fallback if profile hasn't loaded yet
   const userId = profile?.id || user?.id
   const role   = profile?.role || 'inspector'
+  const isViewer = role === 'viewer'
 
   useEffect(() => {
     if (userId) fetchAudits(userId, role)
@@ -63,9 +64,15 @@ export default function DashboardPage() {
           <h1 className="page-title">
             Good {getGreeting()}, <span className="font-display italic">{displayName}</span>
           </h1>
-          <p className="page-subtitle">Here's what's happening with your audits today.</p>
+          <p className="page-subtitle">
+            {isViewer ? 'Overview of your organization\'s audit activity.' : "Here's what's happening with your audits today."}
+          </p>
         </div>
-        <Link to="/audits" className="btn-primary self-start sm:self-auto"><Plus size={14} /> New Audit</Link>
+        {!isViewer && (
+          <Link to="/audits" className="btn-primary self-start sm:self-auto">
+            <Plus size={14} /> New Audit
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -88,7 +95,11 @@ export default function DashboardPage() {
         ) : recent.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-sm text-brand-gray-500 mb-4">No audits yet.</p>
-            <Link to="/audits" className="btn-primary inline-flex"><Plus size={14} /> Start first audit</Link>
+            {!isViewer && (
+              <Link to="/audits" className="btn-primary inline-flex">
+                <Plus size={14} /> Start first audit
+              </Link>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">

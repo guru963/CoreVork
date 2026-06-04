@@ -1,7 +1,17 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Mail, ArrowLeft } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
 
 export default function VerifyEmailPage() {
+  const { user } = useAuthStore()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, navigate])
   return (
     <div className="min-h-screen bg-brand-white flex items-center justify-center p-6">
       <div className="w-full max-w-md card p-8 text-center animate-slide-up">

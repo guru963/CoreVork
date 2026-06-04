@@ -1,18 +1,28 @@
 import { useEffect, useState } from 'react'
 import { Users, Plus, MoreVertical } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
-import { Badge, EmptyState, Modal, Spinner } from '@/components/ui'
+import { Badge, EmptyState, Modal, Spinner, ConfirmDialog } from '@/components/ui'
 import { formatDate, getInitials } from '@/lib/utils'
 
 export default function UsersPage() {
-  const { profile } = useAuthStore()
+  const { profile, session } = useAuthStore()
+
+  if (profile && profile.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />
+  }
+
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
   const [inviteForm, setInviteForm] = useState({ email: '', full_name: '', role: 'inspector' })
   const [inviting, setInviting] = useState(false)
   const [error, setError] = useState('')
+
+  const [activeMenuId, setActiveMenuId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchUsers = async () => {
     const { data } = await supabase
@@ -26,23 +36,111 @@ export default function UsersPage() {
 
   useEffect(() => { if (profile) fetchUsers() }, [profile])
 
+  const handleResendInvite = async (user) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_PDF_SERVICE_URL}/users/resend-invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role,
+          orgId: profile.org_id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to resend invite')
+      }
+
+      const data = await response.json()
+      if (data.emailSent) {
+        alert('✉ Invitation email resent successfully to ' + user.email + '!')
+      } else if (data.inviteLink) {
+        try {
+          await navigator.clipboard.writeText(data.inviteLink)
+          alert('Invitation regenerated! ' + (data.emailNote || '') + '\n\nThe invite link has been copied to your clipboard.')
+        } catch {
+          alert('Invitation regenerated! ' + (data.emailNote || '') + '\n\nInvite link:\n' + data.inviteLink)
+        }
+      } else {
+        alert('Invitation resent successfully!')
+      }
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const response = await fetch(`${import.meta.env.VITE_PDF_SERVICE_URL}/users/${deleteTarget.id}?orgId=${profile?.org_id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to remove user')
+      }
+
+      await fetchUsers()
+      setDeleteTarget(null)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const handleInvite = async (e) => {
     e.preventDefault()
     setInviting(true)
     setError('')
     try {
-      // In a real app this would send an email invite via Supabase Auth
-      // For now we create a placeholder profile
-      const { error: err } = await supabase.from('profiles').insert({
-        email: inviteForm.email,
-        full_name: inviteForm.full_name,
-        role: inviteForm.role,
-        org_id: profile.org_id,
+      const response = await fetch(`${import.meta.env.VITE_PDF_SERVICE_URL}/users/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          email: inviteForm.email,
+          fullName: inviteForm.full_name,
+          role: inviteForm.role,
+          orgId: profile.org_id,
+        }),
       })
-      if (err) throw err
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send invite')
+      }
+
+      const data = await response.json()
       await fetchUsers()
       setShowInvite(false)
       setInviteForm({ email: '', full_name: '', role: 'inspector' })
+
+      if (data.emailSent) {
+        alert('✉ Invitation email sent successfully to ' + inviteForm.email + '!')
+      } else if (data.inviteLink) {
+        try {
+          await navigator.clipboard.writeText(data.inviteLink)
+          alert('User invited! ' + (data.emailNote || '') + '\n\nThe invitation link has been copied to your clipboard.')
+        } catch {
+          alert('User invited! ' + (data.emailNote || '') + '\n\nInvite link:\n' + data.inviteLink)
+        }
+      } else {
+        alert('Invitation sent successfully!')
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -80,28 +178,57 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map(user => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-brand-gray-200 flex items-center justify-center text-xs font-semibold text-brand-gray-700">
-                        {getInitials(user.full_name || '')}
+              {users.map((user, idx) => {
+                const isLast = idx === users.length - 1
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-brand-gray-200 flex items-center justify-center text-xs font-semibold text-brand-gray-700">
+                          {getInitials(user.full_name || '')}
+                        </div>
+                        <div>
+                          <p className="font-medium">{user.full_name || '—'}</p>
+                          <p className="text-xs text-brand-gray-400">{user.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{user.full_name || '—'}</p>
-                        <p className="text-xs text-brand-gray-400">{user.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <Badge color={roleColor[user.role] || 'gray'} className="capitalize">{user.role}</Badge>
-                  </td>
-                  <td className="text-xs text-brand-gray-500">{formatDate(user.created_at)}</td>
-                  <td>
-                    <button className="btn-ghost p-1.5"><MoreVertical size={14} /></button>
+                    </td>
+                    <td>
+                      <Badge color={roleColor[user.role] || 'gray'} className="capitalize">{user.role}</Badge>
+                    </td>
+                    <td className="text-xs text-brand-gray-500">{formatDate(user.created_at)}</td>
+                    <td className="relative text-right">
+                      {user.id !== profile?.id && (
+                        <>
+                          <button onClick={() => setActiveMenuId(activeMenuId === user.id ? null : user.id)} className="btn-ghost p-1.5">
+                            <MoreVertical size={14} />
+                          </button>
+                          {activeMenuId === user.id && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
+                              <div className={`absolute right-4 w-36 bg-white border border-brand-gray-100 rounded-lg shadow-card py-1 z-20 text-left dark:bg-brand-gray-900 dark:border-brand-gray-800 ${isLast ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+                              <button 
+                                type="button" 
+                                onClick={() => { handleResendInvite(user); setActiveMenuId(null) }} 
+                                className="w-full text-left px-3 py-1.5 text-xs text-brand-black dark:text-brand-white hover:bg-brand-gray-50 dark:hover:bg-brand-gray-800"
+                              >
+                                Resend Invite
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => { setDeleteTarget(user); setActiveMenuId(null) }} 
+                                className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                              >
+                                Remove Member
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
@@ -134,6 +261,16 @@ export default function UsersPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Remove Team Member"
+        message={`Are you sure you want to remove ${deleteTarget?.full_name || 'this member'}? They will lose access to the organization immediately.`}
+        confirmLabel={deleting ? "Removing..." : "Remove"}
+        danger
+      />
     </div>
   )
 }

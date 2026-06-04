@@ -5,7 +5,7 @@ export const useChecklistStore = create((set) => ({
   checklists: [],
   loading: false,
 
-  fetchChecklists: async (search = '', standard = '') => {
+  fetchChecklists: async (search = '', standard = '', orgId = null) => {
     set({ loading: true })
     let query = supabase
       .from('checklists')
@@ -16,6 +16,12 @@ export const useChecklistStore = create((set) => ({
 
     if (search) query = query.ilike('title', `%${search}%`)
     if (standard) query = query.eq('standard', standard)
+
+    if (orgId) {
+      query = query.or(`org_id.is.null,org_id.eq.${orgId}`)
+    } else {
+      query = query.is('org_id', null)
+    }
 
     const { data, error } = await query
     if (!error) set({ checklists: data || [] })

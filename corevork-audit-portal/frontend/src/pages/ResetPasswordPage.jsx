@@ -85,7 +85,7 @@ export default function ResetPasswordPage() {
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                className="input pr-10"
+                className="input !pr-10"
                 placeholder="Min. 8 characters"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
